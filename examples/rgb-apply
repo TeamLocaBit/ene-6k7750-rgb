@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# rgb_apply.sh — set RGB to match current pcmode (Work=cyan static, Gaming=purple).
+# Runs as a oneshot after openrgb-server is up. Safe to re-run.
+#
+# 2026-10-01: GPU and H150i do NOT support device-level Static mode (only zone-level,
+# which the CLI can't address here). All static fills use Direct mode with one color
+# per LED. Device order from --list-devices: 0=PNY 5070Ti, 2=H150i, 3=LianLi(false pos).
+set -u
+SERVER=(--client 127.0.0.1:6742)
+mode=$(systemctl get-default)
+
+wait_server() {
+  for _ in $(seq 1 30); do
+    openrgb "${SERVER[@]}" --list-devices >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  return 1
+}
+
+# paint <dev_id> <num_leds> <RRGGBB> — Direct-mode full-device fill
+paint() {
+  local colors
+  colors=$(python3 -c "print(','.join(['$3']*$2))" 2>/dev/null) || return 1
+  openrgb "${SERVER[@]}" -d "$1" -m Direct -c "$colors" >/dev/null 2>&1
+}
+
+# Motherboard ARGB fans (Maxsun ENE 6K7750) — independent of OpenRGB server
+if [ -x /usr/local/bin/ene-fanctl ]; then
+  if [ "$mode" = "multi-user.target" ]; then
+    /usr/local/bin/ene-fanctl mode work >/dev/null 2>&1 || true
+  else
+    /usr/local/bin/ene-fanctl mode gaming >/dev/null 2>&1 || true
+  fi
+fi
+
+wait_server || { echo "openrgb-server not reachable"; exit 1; }
+
+rm -f /run/thermal-led/fan_color 2>/dev/null || true
+
+if [ "$mode" = "multi-user.target" ]; then
+  # WORK mode: steady cyan everywhere = machine is on the clock
+  paint 0 41 00FFFF   # GPU: 4 Logo + 20 Front + 17 Arrow LEDs
+  paint 2 16 00FFFF   # H150i CPU block: 16 LEDs
+else
+  # GAMING mode: purple base, then thermal-led service paints the whole case
+  # ONE unified color tracking the hottest component (GPU/CPU heat-map).
+  paint 0 41 8000FF
+  paint 2 16 8000FF
+fi
+echo "rgb applied for mode: $mode"

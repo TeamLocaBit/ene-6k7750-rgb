@@ -1,0 +1,13 @@
+[Unit]
+Description=Whole-case thermal LED (GPU+CPU heat-map, unified in gaming mode)
+After=openrgb-server.service rgb-apply.service
+Wants=openrgb-server.service
+
+[Service]
+ExecStartPre=/bin/sleep 15
+ExecStart=/usr/bin/python3 /opt/thermal-led/thermal_led.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target graphical.target

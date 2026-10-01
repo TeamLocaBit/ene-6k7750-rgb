@@ -1,0 +1,12 @@
+[Unit]
+Description=Apply mode-colored RGB
+After=openrgb-server.service
+Requires=openrgb-server.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/rgb-apply
+
+[Install]
+WantedBy=multi-user.target graphical.target

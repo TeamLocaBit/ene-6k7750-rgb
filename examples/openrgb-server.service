@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenRGB server (headless RGB control)
+After=multi-user.target
+
+[Service]
+Type=simple
+Environment=QT_QPA_PLATFORM=offscreen
+ExecStartPre=/usr/bin/sleep 8
+ExecStart=/usr/bin/openrgb --server --server-host 127.0.0.1 --server-port 6742
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target graphical.target
